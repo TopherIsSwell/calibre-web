@@ -23,7 +23,7 @@ import sys
 from datetime import datetime, timezone, timedelta
 import itertools
 import uuid
-from flask import session as flask_session
+from flask import session as flask_session, current_app
 from binascii import hexlify
 
 from .cw_login import AnonymousUserMixin, current_user
@@ -77,7 +77,9 @@ def store_user_session():
     if flask_session.get('_user_id', ""):
         try:
             if not check_user_session(_user, _id, _random):
-                expiry = int((datetime.now()  + timedelta(days=31)).timestamp())
+                expiry = int(
+                    (datetime.now() + current_app.permanent_session_lifetime).timestamp()
+                )
                 user_session = User_Sessions(_user, _id, _random, expiry)
                 session.add(user_session)
                 session.commit()
@@ -109,7 +111,9 @@ def check_user_session(user_id, session_key, random):
                                                     User_Sessions.random == random,
                                                     ).one_or_none()
         if found is not None:
-            new_expiry = int((datetime.now()  + timedelta(days=31)).timestamp())
+            new_expiry = int(
+                (datetime.now() + current_app.permanent_session_lifetime).timestamp()
+            )
             if new_expiry - found.expiry > 86400:
                 found.expiry = new_expiry
                 session.merge(found)
